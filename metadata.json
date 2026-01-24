@@ -1,0 +1,5 @@
+{
+  "name": "ANALISADOR DE AÇÕES",
+  "description": "Um simulador avançado de análise de ações que gera dados fictícios de mercado e utiliza a Inteligência Artificial Gemini para fornecer insights estratégicos sobre o desempenho de ativos simulados.",
+  "requestFramePermissions": []
+}
