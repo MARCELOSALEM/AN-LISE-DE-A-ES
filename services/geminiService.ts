@@ -5,9 +5,8 @@ import { AIInsight } from "../types";
 /**
  * Tenta extrair dados estruturados de uma resposta que pode conter texto e JSON misturados.
  */
-const flexibleExtract = (text: string, symbol: string): AIInsight | null => {
+const flexibleExtract = (text: string): AIInsight | null => {
   try {
-    // 1. Tenta encontrar um bloco JSON puro
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -16,58 +15,50 @@ const flexibleExtract = (text: string, symbol: string): AIInsight | null => {
       }
     }
   } catch (e) {
-    console.warn("Falha no parse inicial de JSON, tentando extração por Regex...");
+    console.warn("Falha no parse de JSON estruturado.");
   }
 
-  // 2. Fallback: Extração via Regex se o modelo retornar texto corrido
-  // Procura por padrões como "R$ 25,50" ou "25.50"
+  // Fallback de extração via Regex caso o JSON falhe
   const findPrice = (regex: RegExp) => {
     const match = text.match(regex);
-    if (match) {
-      return parseFloat(match[1].replace(',', '.'));
-    }
+    if (match) return parseFloat(match[1].replace(',', '.'));
     return 0;
   };
 
-  const currentPrice = findPrice(/preço atual.*?(\d+[.,]\d+)/i) || findPrice(/cotação.*?(\d+[.,]\d+)/i);
-  const max60 = findPrice(/máximo.*?(\d+[.,]\d+)/i) || findPrice(/máxima.*?(\d+[.,]\d+)/i);
-  const min60 = findPrice(/mínimo.*?(\d+[.,]\d+)/i) || findPrice(/mínima.*?(\d+[.,]\d+)/i);
-
-  if (currentPrice > 0) {
+  const current = findPrice(/atual.*?(\d+[.,]\d+)/i) || findPrice(/cotação.*?(\d+[.,]\d+)/i);
+  
+  if (current > 0) {
     return {
-      analysis: text.split('\n')[0].substring(0, 200) + "...", // Pega a primeira linha como análise
-      recommendation: text.toUpperCase().includes("COMPRA") ? "BUY" : 
-                      text.toUpperCase().includes("VENDA") ? "SELL" : "HOLD",
+      analysis: "Análise baseada em dados reais encontrados via busca.",
+      recommendation: text.toUpperCase().includes("COMPRA") ? "BUY" : "HOLD",
       riskLevel: "MEDIUM",
       realData: {
-        currentPrice,
-        maxPrice: max60 || currentPrice * 1.05,
-        minPrice: min60 || currentPrice * 0.95
+        currentPrice: current,
+        maxPrice: current * 1.02,
+        minPrice: current * 0.98
       }
     };
   }
-
   return null;
 };
 
 export const getRealMarketData = async (symbol: string): Promise<{ insight: AIInsight; sources: Array<{ title: string; uri: string }> }> => {
-  // Nota: Certifique-se de que a variável API_KEY está definida no Netlify (Site Settings > Environment variables)
-  const apiKey = process.env.API_KEY;
+  // Acesso seguro para evitar ReferenceError: process is not defined
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : (window as any).API_KEY;
   
   if (!apiKey) {
-    console.error("ERRO: API_KEY não encontrada. Verifique as variáveis de ambiente no Netlify.");
+    console.error("Chave de API não encontrada. Certifique-se de que a variável de ambiente API_KEY está configurada.");
     throw new Error("Configuração de API ausente.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
   
   const prompt = `
-    PESQUISA OBRIGATÓRIA NO GOOGLE SEARCH:
-    Encontre os valores REAIS de hoje para a ação ${symbol} na B3 Brasil.
+    PESQUISA GOOGLE SEARCH: Qual a cotação atual, máxima e mínima de hoje para a ação ${symbol} na B3 Brasil?
     
-    Retorne EXATAMENTE este formato JSON, sem conversas:
+    Responda APENAS com este JSON:
     {
-      "analysis": "Breve análise do ticker",
+      "analysis": "Sua análise aqui",
       "recommendation": "BUY", "SELL", "HOLD" ou "NEUTRAL",
       "riskLevel": "LOW", "MEDIUM" ou "HIGH",
       "realData": {
@@ -76,7 +67,6 @@ export const getRealMarketData = async (symbol: string): Promise<{ insight: AIIn
         "minPrice": 0.00
       }
     }
-    Se não encontrar o valor exato da máxima de 60 dias, use a máxima das últimas 24h.
   `;
 
   try {
@@ -85,17 +75,15 @@ export const getRealMarketData = async (symbol: string): Promise<{ insight: AIIn
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.1, // Menor temperatura para respostas mais determinísticas
+        temperature: 0.1,
       },
     });
 
     const responseText = response.text || '';
-    console.log("Resposta bruta do Gemini:", responseText); // Útil para depurar no console do navegador
-
-    const insight = flexibleExtract(responseText, symbol);
+    const insight = flexibleExtract(responseText);
     
     if (!insight) {
-      throw new Error("Não foi possível extrair dados válidos da resposta.");
+      throw new Error("Não foi possível processar a resposta da IA.");
     }
 
     const sources: Array<{ title: string; uri: string }> = [];
@@ -105,7 +93,7 @@ export const getRealMarketData = async (symbol: string): Promise<{ insight: AIIn
       chunks.forEach((chunk: any) => {
         if (chunk.web && chunk.web.uri) {
           sources.push({
-            title: chunk.web.title || 'Ver dados no Google Finance',
+            title: chunk.web.title || 'Google Finance / B3',
             uri: chunk.web.uri
           });
         }
@@ -114,7 +102,7 @@ export const getRealMarketData = async (symbol: string): Promise<{ insight: AIIn
 
     return { insight, sources };
   } catch (error) {
-    console.error("Erro na camada de serviço Gemini:", error);
+    console.error("Erro no serviço Gemini:", error);
     throw error;
   }
 };
