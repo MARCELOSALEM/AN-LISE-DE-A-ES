@@ -52,9 +52,12 @@ const App: React.FC = () => {
       
       setInsight(aiResult);
       setSources(groundingSources);
-    } catch (err) {
-      setError('Não conseguimos obter dados reais para este ticker agora. Tente um código conhecido como PETR4 ou VALE3.');
-      console.error("Erro na aplicação:", err);
+    } catch (err: any) {
+      const msg = err.message === 'Configuração de API ausente.' 
+        ? 'Erro de Configuração: A chave da API não foi encontrada no servidor.' 
+        : 'Não conseguimos obter dados para este ticker. Verifique se o código está correto ou tente novamente em instantes.';
+      setError(msg);
+      console.error("Erro detalhado:", err);
     } finally {
       setLoading(false);
     }
@@ -72,7 +75,6 @@ const App: React.FC = () => {
       <Header />
 
       <main>
-        {/* Banner de Status */}
         <div className="bg-blue-600 border-l-4 border-blue-800 p-4 rounded-r-xl mb-8 shadow-md">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -81,15 +83,14 @@ const App: React.FC = () => {
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wide">Dados de Mercado em Tempo Real</h3>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wide">Dados de Mercado Conectados</h3>
               <p className="mt-1 text-sm text-blue-100">
-                Conectado via Google Search para obter cotações oficiais e recentes da B3.
+                Usando Inteligência Artificial para buscar cotações reais da B3 via Grounding.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Search Section */}
         <div className="bg-white p-2 sm:p-3 rounded-2xl shadow-xl border border-slate-200 flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-grow">
             <input
@@ -115,18 +116,17 @@ const App: React.FC = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span>Consultando B3...</span>
+                <span>Buscando...</span>
               </>
             ) : (
-              <span>Buscar Real</span>
+              <span>Consultar B3</span>
             )}
           </button>
         </div>
 
-        {/* Quick Selection Chips */}
         <div className="mb-10">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-            Favoritas da B3
+            Atalhos B3
           </p>
           <div className="flex flex-wrap gap-2">
             {TOP_STOCKS.map((s) => (
@@ -143,12 +143,11 @@ const App: React.FC = () => {
         </div>
 
         {error && (
-          <div className="mb-8 p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-center font-medium shadow-sm">
+          <div className="mb-8 p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-center font-medium shadow-sm animate-pulse">
             {error}
           </div>
         )}
 
-        {/* Results Container */}
         {stockData && (
           <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-2">
@@ -156,15 +155,12 @@ const App: React.FC = () => {
                 {stockData.symbol}
                 <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold uppercase tracking-widest">Real</span>
               </h2>
-              <span className="text-sm text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-full w-fit">
-                Análise Recente
-              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <PriceCard label="Cotação Agora" value={stockData.currentPrice} type="current" />
-              <PriceCard label="Máxima Recente" value={stockData.maxPrice} type="max" />
-              <PriceCard label="Mínima Recente" value={stockData.minPrice} type="min" />
+              <PriceCard label="Máxima do Dia" value={stockData.maxPrice} type="max" />
+              <PriceCard label="Mínima do Dia" value={stockData.minPrice} type="min" />
             </div>
 
             {insight && (
@@ -173,31 +169,17 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Welcome Empty State */}
         {!stockData && !loading && !error && (
           <div className="text-center py-20 bg-white border border-dashed border-slate-300 rounded-3xl">
-            <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-              </svg>
-            </div>
-            <h3 className="text-slate-800 font-bold mb-2">Pronto para analisar?</h3>
-            <p className="text-slate-400 font-medium px-4 max-w-sm mx-auto">Digite um código da B3 para que nossa IA busque dados reais e gere insights instantâneos.</p>
+            <h3 className="text-slate-800 font-bold mb-2">Busca Real de Ativos</h3>
+            <p className="text-slate-400 font-medium px-4 max-w-sm mx-auto">Selecione uma ação acima para buscar dados reais de mercado.</p>
           </div>
         )}
       </main>
 
       <footer className="mt-20 text-center text-slate-400 text-sm">
-        <p>&copy; {new Date().getFullYear()} SimuStock AI. Dados em tempo real via Google Grounding.</p>
-        <p className="mt-1 text-xs">Powered by Gemini 3 Flash & React</p>
+        <p>&copy; {new Date().getFullYear()} SimuStock AI. Conectado ao Google Grounding.</p>
       </footer>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 };
