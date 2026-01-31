@@ -2,8 +2,8 @@
 export interface StockData {
   symbol: string;
   currentPrice: number;
-  maxPrice: number;
-  minPrice: number;
+  maxPrice2Months: number;
+  minPrice2Months: number;
   startDate: string;
   endDate: string;
   sources: Array<{ title: string; uri: string }>;
@@ -15,7 +15,7 @@ export interface AIInsight {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   realData: {
     currentPrice: number;
-    maxPrice: number;
-    minPrice: number;
+    maxPrice2Months: number;
+    minPrice2Months: number;
   };
 }
